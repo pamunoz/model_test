@@ -3,6 +3,7 @@ package com.packtpub.libgdx.modeltest;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -19,6 +20,7 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.StringBuilder;
 
@@ -35,6 +37,12 @@ public class MyModelTest extends ApplicationAdapter {
     public SpriteBatch spriteBatch;
     public BitmapFont font;
     public StringBuilder stringBuilder = new StringBuilder();
+
+    private Vector3 position = new Vector3();
+    private boolean isVisible(final Camera cam, final ModelInstance instance) {
+        instance.transform.getTranslation(position);
+        return cam.frustum.pointInFrustum(position);
+    }
 
 	@Override
 	public void create() {
@@ -81,8 +89,10 @@ public class MyModelTest extends ApplicationAdapter {
 		modelBatch.begin(cam);
         int count = 0;
 		for (ModelInstance instance : instances) {
-            modelBatch.render(instance, environment);
-            count ++;
+            if(isVisible(cam, instance)) {
+                modelBatch.render(instance, environment);
+                count ++;
+            }
         }
 		modelBatch.end();
         orthoCam.update();
