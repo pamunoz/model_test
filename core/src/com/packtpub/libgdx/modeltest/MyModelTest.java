@@ -20,7 +20,10 @@ import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.StringBuilder;
 
@@ -39,13 +42,10 @@ public class MyModelTest extends ApplicationAdapter {
     public StringBuilder stringBuilder = new StringBuilder();
 
     private Vector3 position = new Vector3();
-    private boolean isVisible(final Camera cam, final ModelInstance instance) {
-        instance.transform.getTranslation(position);
-        return cam.frustum.pointInFrustum(position);
-    }
 
 	@Override
 	public void create() {
+
 
         orthoCam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         orthoCam.position.set(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f, 0);
@@ -75,7 +75,25 @@ public class MyModelTest extends ApplicationAdapter {
 			}
 		}
 
-		camController = new CameraInputController(cam);
+        final BoundingBox box = model.calculateBoundingBox(new BoundingBox());
+        camController = new CameraInputController(cam) {
+            private final Vector3 position = new Vector3();
+
+            @Override
+            public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                Ray ray = cam.getPickRay(screenX, screenY);
+                for (int i = 0; i < instances.size; i++) {
+                    ModelInstance instance = instances.get(i);
+                    instance.transform.getTranslation(position);
+                    if(Intersector.intersectRayBoundsFast(ray, position, box.getDimensions(position))) {
+                        instances.removeIndex(i);
+                        i--;
+                    }
+                }
+                return super.touchUp(screenX, screenY, pointer, button);
+            }
+        };
+        
 		Gdx.input.setInputProcessor(camController);
 	}
 
@@ -112,4 +130,10 @@ public class MyModelTest extends ApplicationAdapter {
 		modelBatch.dispose();
 		model.dispose();
 	}
+
+    private boolean isVisible(final Camera cam, final ModelInstance instance) {
+        instance.transform.getTranslation(position);
+        BoundingBox box = instance.calculateBoundingBox(new BoundingBox());
+        return cam.frustum.boundsInFrustum(position, box.getDimensions(position));
+    }
 }
